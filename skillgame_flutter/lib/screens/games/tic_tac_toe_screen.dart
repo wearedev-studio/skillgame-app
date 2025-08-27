@@ -1219,13 +1219,9 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
   bool _shouldShowCancelButton() {
     final isWaiting = _isWaitingForSecondPlayer();
 
-    // Показываем CANCEL если:
-    // 1. Идет поиск ИЛИ ожидание второго игрока
-    // 2. И мы можем отменить поиск (начали сами)
-    // 3. И игра не закончена
-    return (_isSearchingForOpponent || isWaiting) &&
-        _canCancelSearch &&
-        !gameEnded;
+    // ИСПРАВЛЕНО: Показываем CANCEL если идет любой поиск или ожидание
+    // Убираем ограничение _canCancelSearch - игрок всегда может отменить поиск
+    return (_isSearchingForOpponent || isWaiting) && !gameEnded;
   }
 
   // Определяет, нужно ли показывать кнопку SURRENDER

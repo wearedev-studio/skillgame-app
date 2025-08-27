@@ -56,11 +56,12 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
       // Сначала вызываем оригинальный callback GameProvider
       originalOnGameStart?.call(room);
 
-      // Потом наш локальный callback
-      if (mounted && room.gameType == widget.gameType) {
-        // ИСПРАВЛЕНО: Останавливаем поиск только если есть 2+ игроков
+      // ИСПРАВЛЕНО: Переходим к игре только если активно ищем/создаем комнату
+      if (mounted &&
+          room.gameType == widget.gameType &&
+          (_isSearching || _isCreatingRoom)) {
         print(
-            '=== GAME LOBBY: Game found with ${room.players.length} players ===');
+            '=== GAME LOBBY: Game found with ${room.players.length} players (was searching: $_isSearching, creating: $_isCreatingRoom) ===');
         try {
           if (mounted) {
             setState(() {
@@ -80,6 +81,9 @@ class _GameLobbyScreenState extends State<GameLobbyScreen> {
           // Все равно переходим к игровому экрану
           _navigateToGameScreen(room);
         }
+      } else if (mounted && room.gameType == widget.gameType) {
+        print(
+            '=== GAME LOBBY: Ignoring gameStart - not actively searching (searching: $_isSearching, creating: $_isCreatingRoom) ===');
       }
     };
 

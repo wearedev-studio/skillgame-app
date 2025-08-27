@@ -35,7 +35,18 @@ class GameProvider extends ChangeNotifier {
     };
 
     _webSocketService.onGameStart = (room) {
+      print('🏠 PROVIDER: GameStart received for room ${room.id}');
+
+      // УСИЛЕННАЯ ФИЛЬТРАЦИЯ: Принимаем gameStart только если у нас нет активной комнаты
+      // или если это событие для нашей текущей комнаты
+      if (_currentRoom != null && _currentRoom!.id != room.id) {
+        print(
+            '🏠 PROVIDER: Ignoring gameStart for room ${room.id} - already have active room ${_currentRoom!.id}');
+        return;
+      }
+
       _currentRoom = room;
+      print('🏠 PROVIDER: Set current room to ${room.id}');
       notifyListeners();
     };
 
@@ -52,7 +63,17 @@ class GameProvider extends ChangeNotifier {
     };
 
     _webSocketService.onGameEnd = (result) {
-      // Handle game end
+      // УСИЛЕННАЯ ФИЛЬТРАЦИЯ: Проверяем что это событие для нашей комнаты
+      final gameRoomId = result['roomId'];
+      if (_currentRoom != null &&
+          gameRoomId != null &&
+          gameRoomId != _currentRoom!.id) {
+        print(
+            '🏠 PROVIDER: Ignoring gameEnd for room $gameRoomId - not our room ${_currentRoom!.id}');
+        return;
+      }
+
+      print('🏠 PROVIDER: Processing gameEnd for our room');
       notifyListeners();
     };
 
@@ -254,8 +275,14 @@ class GameProvider extends ChangeNotifier {
 
   void leaveRoom() {
     if (_currentRoom != null) {
+      print('🏠 PROVIDER: Leaving room ${_currentRoom!.id}');
       _webSocketService.leaveGame(_currentRoom!.id);
+
+      // ВАЖНО: Очищаем текущую комнату НЕМЕДЛЕННО, чтобы предотвратить обработку
+      // дальнейших событий от этой комнаты
+      final oldRoomId = _currentRoom!.id;
       _currentRoom = null;
+      print('🏠 PROVIDER: Cleared current room (was: $oldRoomId)');
       notifyListeners();
     }
   }
