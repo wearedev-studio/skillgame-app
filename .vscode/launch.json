@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "skillgame-app",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "skillgame-app (profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "skillgame-app (release mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "skillgame_flutter",
+            "cwd": "skillgame_flutter",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "skillgame_flutter (profile mode)",
+            "cwd": "skillgame_flutter",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "skillgame_flutter (release mode)",
+            "cwd": "skillgame_flutter",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
