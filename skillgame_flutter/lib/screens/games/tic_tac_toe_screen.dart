@@ -8,6 +8,7 @@ import 'package:skillgame_flutter/models/game_model.dart';
 import 'package:skillgame_flutter/services/notification_service.dart';
 import 'package:skillgame_flutter/utils/theme.dart';
 import 'package:skillgame_flutter/widgets/custom_button.dart';
+import 'package:skillgame_flutter/widgets/game_result_modal.dart';
 import 'game_lobby_screen.dart';
 
 class TicTacToeScreen extends StatefulWidget {
@@ -388,27 +389,45 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
             gameEnded = true;
             final winnerData = gameData['winner'];
 
-            // Determine winner based on response format
+            // Determine winner and show modal
+            String resultType;
+            String resultMessage;
+
             if (winnerData != null) {
               if (winnerData == myUserId) {
                 winner = mySymbol;
                 gameStatus = 'You win!';
+                resultType = 'win';
+                resultMessage =
+                    'Congratulations! You won the match. Well played!';
               } else {
                 winner = mySymbol == 'X' ? 'O' : 'X';
                 gameStatus = 'Opponent wins!';
+                resultType = 'lose';
+                resultMessage =
+                    'Better luck next time! Keep practicing to improve.';
               }
             } else {
               winner = null;
               gameStatus = 'Draw!';
+              resultType = 'draw';
+              resultMessage = 'The match ended in a draw. Well played!';
             }
 
-            // Show game end notification if roomId is available
+            // Show modal instead of notification
             if (roomId != null) {
-              NotificationService.showGameEnd(
-                gameType: 'Tic Tac Toe',
-                result: gameStatus,
-                roomId: roomId!,
-              );
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (mounted) {
+                  GameResultModal.show(
+                    context: context,
+                    result: resultType,
+                    gameType: 'tic-tac-toe',
+                    gameTitle: 'Tic Tac Toe',
+                    customMessage: resultMessage,
+                    autoReturnSeconds: 5,
+                  );
+                }
+              });
             }
           } else {
             gameStatus = isMyTurn ? 'Your turn' : 'Opponent\'s turn';
@@ -431,15 +450,20 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
 
     // Listen for game end with room filtering
     gameProvider.webSocketService.onGameEnd = (result) {
-      // ИСПРАВЛЕНО: Фильтруем gameEnd по roomId
-      if (gameEnded) {
-        print('🎮 GAME END: Already processed - ignoring');
+      print('🎮 TIC TAC TOE GAME END: Received gameEnd event');
+      print('🎮 TIC TAC TOE GAME END: Result = $result');
+      print('🎮 TIC TAC TOE GAME END: Current gameEnded = $gameEnded');
+      print('🎮 TIC TAC TOE GAME END: Current roomId = $roomId');
+
+      // ИСПРАВЛЕНО: НЕ игнорируем если gameEnded уже true - обрабатываем событие
+      // Проверяем что это завершение нашей игры
+      if (roomId == null) {
+        print('🎮 TIC TAC TOE GAME END: No roomId - ignoring');
         return;
       }
 
-      // Проверяем что это завершение нашей игры
-      if (roomId == null) {
-        print('🎮 GAME END: No roomId - ignoring');
+      if (!mounted) {
+        print('🎮 TIC TAC TOE GAME END: Not mounted - ignoring');
         return;
       }
 
@@ -467,11 +491,26 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
 
         gameEnded = true;
 
-        // Parse winner correctly - server can send different formats
+        // Parse winner correctly and show modal
         final winnerData = result['winner'];
+        String resultType = 'draw';
+        String resultMessage = 'The match ended in a draw. Well played!';
+
         if (winnerData != null) {
           if (winnerData is String) {
             winner = winnerData;
+            // Determine if it's win or lose based on winner
+            if (winner == mySymbol) {
+              resultType = 'win';
+              gameStatus = 'You win!';
+              resultMessage =
+                  'Congratulations! You won the match. Well played!';
+            } else {
+              resultType = 'lose';
+              gameStatus = 'You lose!';
+              resultMessage =
+                  'Better luck next time! Keep practicing to improve.';
+            }
           } else if (winnerData is Map) {
             // If winner is a player object, extract username or check if it's me
             final authProvider =
@@ -480,30 +519,45 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
             if (winnerId == authProvider.user?.id) {
               winner = mySymbol;
               gameStatus = 'You win!';
+              resultType = 'win';
+              resultMessage =
+                  'Congratulations! You won the match. Well played!';
             } else {
               winner = mySymbol == 'X' ? 'O' : 'X';
               gameStatus = 'You lose!';
+              resultType = 'lose';
+              resultMessage =
+                  'Better luck next time! Keep practicing to improve.';
             }
           }
         } else {
           winner = null;
           gameStatus = 'Draw!';
+          resultType = 'draw';
+          resultMessage = 'The match ended in a draw. Well played!';
         }
 
-        // Use provided message if no custom status set
-        if (result['message'] != null && !gameStatus.contains('You')) {
-          gameStatus = result['message'];
+        // Use provided message if available
+        if (result['message'] != null) {
+          resultMessage = result['message'];
         }
 
         print('Game ended. Final status: $gameStatus');
-      });
 
-      // Show notification
-      NotificationService.showGameEnd(
-        gameType: 'Tic Tac Toe',
-        result: gameStatus,
-        roomId: roomId ?? 'unknown',
-      );
+        // Show modal instead of notification
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            GameResultModal.show(
+              context: context,
+              result: resultType,
+              gameType: 'tic-tac-toe',
+              gameTitle: 'Tic Tac Toe',
+              customMessage: resultMessage,
+              autoReturnSeconds: 5,
+            );
+          }
+        });
+      });
     };
 
     // Listen for opponent disconnected
@@ -1088,42 +1142,7 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
                 const SizedBox(height: 20),
               ],
 
-              // Game end status
-              if (gameEnded) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        gameStatus,
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: AppTheme.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (winner != null && gameStatus.contains('win')) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Congratulations!',
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: AppTheme.accentColor,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
+              // УБРАНО: Старое отображение результата игры - теперь показывается в модальном окне
 
               // ИСПРАВЛЕННАЯ логика кнопок с учетом количества игроков
               if (_shouldShowCancelButton()) ...[
@@ -1186,16 +1205,8 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
                     ),
                   ),
                 ),
-              ] else if (gameEnded) ...[
-                // Игра закончена - кнопка возврата в Tic Tac Toe лобби
-                CustomButton(
-                  text: 'Back to Lobby',
-                  onPressed: _backToLobby,
-                  backgroundColor: AppTheme.surfaceColor,
-                  textColor: AppTheme.textPrimary,
-                  width: double.infinity,
-                ),
               ],
+              // УБРАНО: Кнопка "Back to Lobby" - теперь обрабатывается в модальном окне
               // УБРАНА кнопка "FIND OPPONENT" - поиск автоматический
             ],
           ),
